@@ -1288,6 +1288,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rsonpath-tree-automaton"
+version = "0.1.0"
+dependencies = [
+ "rsonpath-syntax",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"

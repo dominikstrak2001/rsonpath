@@ -6,6 +6,7 @@ members = [
     "crates/rsonpath-syntax",
     "crates/rsonpath-syntax-proptest",
     "crates/rsonpath-test",
+    "crates/rsonpath-tree-automaton",
 ]
 
 exclude = ["crates/rsonpath-benchmarks", "crates/rsonpath-test-codegen"]

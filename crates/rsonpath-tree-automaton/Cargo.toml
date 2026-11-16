@@ -1,0 +1,24 @@
+[package]
+name = "rsonpath-tree-automaton"
+version = "0.1.0"
+authors = ["Dominik Strak"]
+license = { workspace = true }
+repository = { workspace = true }
+edition = { workspace = true }
+description = "JSONPath evaluation with bottom-up unranked tree automata."
+readme = "README.md"
+keywords = ["json", "jsonpath", "query", "automata"]
+categories = ["text-processing"]
+publish = false
+
+[dependencies]
+rsonpath-syntax = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde = { workspace = true, features = ["derive"] }
+toml = "0.9.11"
+
+[lints]
+workspace = true
