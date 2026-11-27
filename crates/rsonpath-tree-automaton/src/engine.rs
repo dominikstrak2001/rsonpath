@@ -17,7 +17,7 @@ impl Engine for NaiveEngine {
     fn select<'a>(&self, automaton: &Automaton, root: &'a JsonNode) -> Vec<&'a JsonNode> {
         let mut nodes = vec![];
         let mut letters = vec![];
-        compute_letters(automaton, root, &mut nodes, &mut letters);
+        compute_letters(automaton, root, root, &mut nodes, &mut letters);
 
         let mut results = vec![];
         for (mark, node) in nodes.into_iter().enumerate() {
@@ -35,13 +35,14 @@ impl Engine for NaiveEngine {
 fn compute_letters<'a>(
     automaton: &Automaton,
     node: &'a JsonNode,
+    root: &'a JsonNode,
     nodes: &mut Vec<&'a JsonNode>,
     letters: &mut Vec<Letter>,
 ) {
     nodes.push(node);
-    letters.push(automaton.letter(node));
+    letters.push(automaton.letter(node, root));
     for child in &node.children {
-        compute_letters(automaton, child, nodes, letters);
+        compute_letters(automaton, child, root, nodes, letters);
     }
 }
 

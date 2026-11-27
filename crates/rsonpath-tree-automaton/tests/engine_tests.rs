@@ -1,4 +1,4 @@
-use rsonpath_tree_automaton::{compiler::CompileError, engine::NaiveEngine, query, tree::JsonNode, Error};
+use rsonpath_tree_automaton::{engine::NaiveEngine, query, tree::JsonNode, Error};
 use serde::Deserialize;
 use serde_json::Value;
 use std::{fs, path::Path};
@@ -100,13 +100,19 @@ fn bookstore_all_descendants() {
     assert_eq!(results.len(), 32, "every node except the root");
 }
 
-#[test]
-fn filters_are_rejected() {
-    let result = run(BOOKSTORE, "$..book[?@.series]");
-    assert!(
-        matches!(result, Err(Error::Compile(CompileError::FilterNotSupported))),
-        "got {result:?}"
-    );
+#[test_case("$.store.book[?@.price < 10]", &[DIVERGENT, KASACJA]; "comparison with literal")]
+#[test_case("$..book[?@.series]", &[DIVERGENT, KASACJA]; "existence")]
+#[test_case("$.store.book[?@.category == 'fiction' && @.price > 10]", &[LOTR]; "conjunction")]
+#[test_case("$.store.book[?!(@.category == 'fiction')]", &[CLRS, DDIA]; "negation")]
+#[test_case("$.store.book[?@.series == @.title]", &[DIVERGENT]; "two queries compared")]
+#[test_case("$.store.book[?@.series != @.title]", &[CLRS, DDIA, KASACJA, LOTR]; "missing value differs from a present one")]
+#[test_case("$.store.book[?@.foo == @.bar]", &[CLRS, DDIA, DIVERGENT, KASACJA, LOTR]; "two missing values are equal")]
+#[test_case("$.store.book[?@.price < $.store.book[1].price]", &[DIVERGENT, KASACJA, LOTR]; "absolute query in comparison")]
+#[test_case("$..[?@.color == 'red']", &[BICYCLE]; "descendant filter")]
+#[test_case("$.store[?@[?@.price > 50]]", &[&format!("[{CLRS},{DDIA},{DIVERGENT},{KASACJA},{LOTR}]")]; "nested filter")]
+fn bookstore_filters(query_str: &str, expected: &[&str]) {
+    let results = run(BOOKSTORE, query_str).expect("query must compile");
+    assert_eq!(results, normalize(expected), "query {query_str}");
 }
 
 #[derive(Deserialize)]

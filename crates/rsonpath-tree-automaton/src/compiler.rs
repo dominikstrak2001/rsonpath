@@ -10,8 +10,6 @@ pub const MAX_STEPS: usize = 63;
 pub enum CompileError {
     #[error("query has {0} steps, at most {MAX_STEPS} are supported")]
     TooManySteps(usize),
-    #[error("filter selectors are not supported yet")]
-    FilterNotSupported,
 }
 
 #[inline]
@@ -30,11 +28,7 @@ pub fn compile(query: &JsonPathQuery) -> Result<Automaton, CompileError> {
             Segment::Child(_) => child_steps = child_steps | PosSet::single(k),
             Segment::Descendant(_) => descendant_steps = descendant_steps | PosSet::single(k),
         }
-        let tests = segment
-            .selectors()
-            .iter()
-            .map(compile_selector)
-            .collect::<Result<Vec<_>, _>>()?;
+        let tests = segment.selectors().iter().map(compile_selector).collect();
         selectors.push(tests);
     }
 
@@ -46,12 +40,12 @@ pub fn compile(query: &JsonPathQuery) -> Result<Automaton, CompileError> {
     })
 }
 
-fn compile_selector(selector: &Selector) -> Result<SelectorTest, CompileError> {
+fn compile_selector(selector: &Selector) -> SelectorTest {
     match selector {
-        Selector::Name(name) => Ok(SelectorTest::Name(name.unquoted().to_owned())),
-        Selector::Wildcard => Ok(SelectorTest::Wildcard),
-        Selector::Index(index) => Ok(SelectorTest::Index(*index)),
-        Selector::Slice(slice) => Ok(SelectorTest::Slice(slice.clone())),
-        Selector::Filter(_) => Err(CompileError::FilterNotSupported),
+        Selector::Name(name) => SelectorTest::Name(name.unquoted().to_owned()),
+        Selector::Wildcard => SelectorTest::Wildcard,
+        Selector::Index(index) => SelectorTest::Index(*index),
+        Selector::Slice(slice) => SelectorTest::Slice(slice.clone()),
+        Selector::Filter(expr) => SelectorTest::Filter(expr.clone()),
     }
 }

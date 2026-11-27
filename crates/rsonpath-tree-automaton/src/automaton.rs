@@ -5,7 +5,7 @@
 //! `k+1..=n` remain to be matched between a node and the marked node.
 //! The run accepts when the root reaches position 0.
 use crate::tree::{Edge, JsonNode};
-use rsonpath_syntax::{Index, Slice, Step};
+use rsonpath_syntax::{Index, LogicalExpr, Slice, Step};
 use std::ops::{BitAnd, BitOr, Shr};
 
 /// A set of query positions, stored as a bitmask.
@@ -72,21 +72,23 @@ pub enum SelectorTest {
     Wildcard,
     Index(Index),
     Slice(Slice),
+    Filter(LogicalExpr),
 }
 
 impl SelectorTest {
-    fn matches(&self, edge: &Edge) -> bool {
-        match (self, edge) {
+    fn matches(&self, node: &JsonNode, root: &JsonNode) -> bool {
+        match (self, &node.edge) {
             (Self::Wildcard, Edge::Key(_) | Edge::Index { .. }) => true,
             (Self::Name(name), Edge::Key(key)) => name == key,
             (Self::Index(selector), Edge::Index { index, len }) => index_matches(*selector, *index, *len),
             (Self::Slice(slice), Edge::Index { index, len }) => slice_matches(slice, *index, *len),
+            (Self::Filter(expr), Edge::Key(_) | Edge::Index { .. }) => crate::filter::evaluate(expr, node, root),
             _ => false,
         }
     }
 }
 
-fn index_matches(selector: Index, index: usize, len: usize) -> bool {
+pub(crate) fn index_matches(selector: Index, index: usize, len: usize) -> bool {
     let (index, len) = (index as u64, len as u64);
     match selector {
         Index::FromStart(i) => i.as_u64() == index,
@@ -95,7 +97,7 @@ fn index_matches(selector: Index, index: usize, len: usize) -> bool {
 }
 
 /// Bounds as in RFC 9535, section 2.3.4.2.
-fn slice_matches(slice: &Slice, index: usize, len: usize) -> bool {
+pub(crate) fn slice_matches(slice: &Slice, index: usize, len: usize) -> bool {
     let (index, len) = (index as i64, len as i64);
     let normalize = |i: Index| match i {
         Index::FromStart(i) => i.as_u64() as i64,
@@ -141,12 +143,13 @@ pub struct Automaton {
 
 impl Automaton {
     /// The letter does not depend on which node is marked, so engines can compute it
-    /// once per node and reuse it across runs.
+    /// once per node and reuse it across runs. Filter selectors are evaluated here,
+    /// which may scan the node's subtree.
     #[inline]
     #[must_use]
-    pub fn letter(&self, node: &JsonNode) -> Letter {
+    pub fn letter(&self, node: &JsonNode, root: &JsonNode) -> Letter {
         (1..=self.step_count)
-            .filter(|&step| self.selectors[step].iter().any(|s| s.matches(&node.edge)))
+            .filter(|&step| self.selectors[step].iter().any(|s| s.matches(node, root)))
             .fold(PosSet::EMPTY, |letter, step| letter | PosSet::single(step))
     }
 

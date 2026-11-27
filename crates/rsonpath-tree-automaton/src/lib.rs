@@ -23,6 +23,7 @@
 pub mod automaton;
 pub mod compiler;
 pub mod engine;
+mod filter;
 pub mod tree;
 
 use engine::Engine;
